@@ -1,10 +1,11 @@
+open System
 open System.IO
 
 let parse (filepath:string) =
     File.ReadAllText filepath
-    |> (fun s -> s.Split "\n\n")
+    |> (fun s -> s.Split $"{Environment.NewLine}{Environment.NewLine}")
     |> Array.map (fun s -> s.TrimEnd())
-    |> Array.map (fun s -> (s.Split "\n") |> Array.map int)
+    |> Array.map (fun s -> (s.Split Environment.NewLine) |> Array.map int)
     |> Array.map Array.sum
 
 let partOne (calories:array<int>) =
