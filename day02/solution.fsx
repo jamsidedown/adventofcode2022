@@ -1,20 +1,45 @@
 open System.IO
 
-// input
 // A: Rock, B: Paper, C: Scissors
 
-// output
 // X: Rock, Y: Paper, Z: Scissors
+// X: Lose, Y: Draw, Z: Win
 
 type Choice =
     | Rock
     | Paper
     | Scissors
 
-let beatenBy = Map [ (Rock, Paper); (Paper, Scissors); (Scissors, Rock) ]
-let points = Map [ (Rock, 1); (Paper, 2); (Scissors, 3) ]
-let win = 6
-let draw = 3
+type Result =
+    | Win
+    | Draw
+    | Lose
+
+let choicePoints = Map [ (Rock, 1); (Paper, 2); (Scissors, 3) ]
+let resultPoints = Map [ (Win, 6); (Draw, 3); (Lose, 0) ]
+
+let getResult (opponent:Choice) (self:Choice) =
+    match (opponent, self) with
+    | o, s when o = s -> Draw
+    | Rock, Paper | Paper, Scissors | Scissors, Rock -> Win
+    | _ -> Lose
+
+let getChoice (opponent:Choice) (result:Result) =
+    match result with
+    | Draw -> opponent
+    | Win ->
+        match opponent with
+        | Rock -> Paper
+        | Paper -> Scissors
+        | Scissors -> Rock
+    | Lose ->
+        match opponent with
+        | Rock -> Scissors
+        | Paper -> Rock
+        | Scissors -> Paper
+
+let getScore (choice:Choice) (result:Result) =
+    choicePoints[choice] + resultPoints[result]
 
 let parseChoice (choice:char) =
     match choice with
@@ -23,24 +48,46 @@ let parseChoice (choice:char) =
     | 'C' | 'Z' -> Some(Scissors)
     | _ -> None
 
-let parseRow (row:string) =
+let parseOutcome (outcome:char) =
+    match outcome with
+    | 'X' -> Some(Lose)
+    | 'Y' -> Some(Draw)
+    | 'Z' -> Some(Win)
+    | _ -> None
+
+let parsePartOne (row:string) =
     let theirs = row |> Seq.head |> parseChoice
     let ours = row |> Seq.last |> parseChoice
     match (theirs, ours) with
-    | Some(t), Some(o) when beatenBy[t] = o -> points[o] + win
-    | Some(t), Some(o) when t = o -> points[o] + draw
-    | Some(_), Some(o) -> points[o]
-    | _ -> 0
+    | Some(t), Some(o) -> Some(o, getResult t o)
+    | _ -> None
 
-let parse (filepath:string) =
+let parsePartTwo (row:string) =
+    let theirs = row |> Seq.head |> parseChoice
+    let outcome = row |> Seq.last |> parseOutcome
+    match (theirs, outcome) with
+    | Some(t), Some(o) -> Some(getChoice t o, o)
+    | _ -> None
+
+let partOne (filepath:string) =
     File.ReadAllLines filepath
-    |> Array.map parseRow
+    |> Array.map parsePartOne
+    |> Array.choose id
+    |> Array.map (fun (choice, result) -> getScore choice result)
+    |> Array.sum
 
-let partOne (scores:array<int>) =
-    scores |> Array.sum
+let partTwo (filepath:string) =
+    File.ReadAllLines filepath
+    |> Array.map parsePartTwo
+    |> Array.choose id
+    |> Array.map (fun (choice, result) -> getScore choice result)
+    |> Array.sum
 
-let testInput = parse "day02/test_input.txt"
-let input = parse "day02/input.txt"
+let testInputPath = "day02/test_input.txt"
+let inputPath = "day02/input.txt"
 
-assert (partOne testInput = 15)
-printfn $"{partOne input}"
+assert (partOne testInputPath = 15)
+printfn $"{partOne inputPath}"
+
+assert (partTwo testInputPath = 12)
+printfn $"{partTwo inputPath}"
