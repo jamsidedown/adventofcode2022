@@ -25,18 +25,11 @@ let getResult (opponent:Choice) (self:Choice) =
     | _ -> Lose
 
 let getChoice (opponent:Choice) (result:Result) =
-    match result with
-    | Draw -> opponent
-    | Win ->
-        match opponent with
-        | Rock -> Paper
-        | Paper -> Scissors
-        | Scissors -> Rock
-    | Lose ->
-        match opponent with
-        | Rock -> Scissors
-        | Paper -> Rock
-        | Scissors -> Paper
+    match (opponent, result) with
+    | _, Draw -> opponent
+    | Rock, Win | Scissors, Lose -> Paper
+    | Paper, Win | Rock, Lose -> Scissors
+    | Scissors, Win | Paper, Lose -> Rock
 
 let getScore (choice:Choice) (result:Result) =
     choicePoints[choice] + resultPoints[result]
