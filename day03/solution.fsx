@@ -11,8 +11,7 @@ let parse (filepath:string) =
 
 let partOne (rucksacks:array<string>) =
     rucksacks
-    |> Array.map (fun line ->
-        (line[..(line.Length/2 - 1)], line[line.Length/2..]))
+    |> Array.map (fun line -> line |> Seq.toArray |> Array.splitAt (line.Length/2))
     |> Array.map (fun (first, second) ->
         Set.intersect (Set.ofSeq first) (Set.ofSeq second))
     |> Array.map (Set.toArray >> Array.head >> priorities)
