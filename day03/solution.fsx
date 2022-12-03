@@ -11,10 +11,14 @@ let parse (filepath:string) =
 
 let partOne (rucksacks:array<string>) =
     rucksacks
-    |> Array.map (fun line -> line |> Seq.toArray |> Array.splitAt (line.Length/2))
-    |> Array.map (fun (first, second) ->
-        Set.intersect (Set.ofSeq first) (Set.ofSeq second))
-    |> Array.map (Set.toArray >> Array.head >> priorities)
+    |> Array.map (
+        Seq.toArray
+        >> Array.splitInto 2
+        >> Array.map Set.ofSeq
+        >> Set.intersectMany
+        >> Set.toArray
+        >> Array.head
+        >> priorities)
     |> Array.sum
 
 let partTwo (rucksacks:array<string>) =
