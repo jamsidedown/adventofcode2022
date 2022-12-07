@@ -1,12 +1,18 @@
 open System
 open System.IO
 
+let newline = Environment.NewLine
+let twoLines = $"{newline}{newline}"
+
+let parseInts (input:string) =
+    let trimmed = input.TrimEnd()
+    trimmed.Split newline
+    |> Array.map int
+
 let parse (filepath:string) =
     File.ReadAllText filepath
-    |> (fun s -> s.Split $"{Environment.NewLine}{Environment.NewLine}")
-    |> Array.map (fun s -> s.TrimEnd())
-    |> Array.map (fun s -> (s.Split Environment.NewLine) |> Array.map int)
-    |> Array.map Array.sum
+    |> (fun s -> s.Split twoLines)
+    |> Array.map (parseInts >> Array.sum)
 
 let partOne (calories:array<int>) =
     calories

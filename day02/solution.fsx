@@ -66,15 +66,13 @@ let partOne (filepath:string) =
     File.ReadAllLines filepath
     |> Array.map parsePartOne
     |> Array.choose id
-    |> Array.map (fun (choice, result) -> getScore choice result)
-    |> Array.sum
+    |> Array.sumBy (fun (choice, result) -> getScore choice result)
 
 let partTwo (filepath:string) =
     File.ReadAllLines filepath
     |> Array.map parsePartTwo
     |> Array.choose id
-    |> Array.map (fun (choice, result) -> getScore choice result)
-    |> Array.sum
+    |> Array.sumBy (fun (choice, result) -> getScore choice result)
 
 let testInputPath = "day02/test_input.txt"
 let inputPath = "day02/input.txt"

@@ -32,10 +32,10 @@ let parseStacks (lines:array<string>) =
             |> Array.map (getCrate i)
             |> Array.choose id)
 
-    let lookup = new Dictionary<int,Stack<char>>()
+    let lookup = Dictionary<int,Stack<char>>()
 
     for (index, stack) in (Array.zip indexes stacks) do
-        lookup.Add(index, new Stack<char>(stack))
+        lookup.Add(index, Stack<char>(stack))
 
     lookup
 
@@ -78,7 +78,7 @@ let partTwo (stacks:Dictionary<int,Stack<char>>) (instructions:array<Instruction
     for instruction in instructions do
         let fromStack = stacks[instruction.From]
         let toStack = stacks[instruction.To]
-        let tempStack = new Stack<char>()
+        let tempStack = Stack<char>()
         for _ in 1..instruction.Count do
             let entry = fromStack.Pop()
             tempStack.Push(entry)

@@ -11,7 +11,7 @@ let parse (filepath:string) =
 
 let partOne (rucksacks:array<string>) =
     rucksacks
-    |> Array.map (
+    |> Array.sumBy (
         Seq.toArray
         >> Array.splitInto 2
         >> Array.map Set.ofSeq
@@ -19,20 +19,18 @@ let partOne (rucksacks:array<string>) =
         >> Set.toArray
         >> Array.head
         >> priorities)
-    |> Array.sum
 
 let partTwo (rucksacks:array<string>) =
     rucksacks
     |> Array.map Set.ofSeq
     |> Array.chunkBySize 3
-    |> Array.map (Set.intersectMany >> Set.toArray >> Array.head >> priorities)
-    |> Array.sum
+    |> Array.sumBy (Set.intersectMany >> Set.toArray >> Array.head >> priorities)
 
-let test_input = parse "./day03/test_input.txt"
+let testInput = parse "./day03/test_input.txt"
 let input = parse "./day03/input.txt"
 
-assert (partOne test_input = 157)
+assert (partOne testInput = 157)
 printfn $"{partOne input}"
 
-assert (partTwo test_input = 70)
+assert (partTwo testInput = 70)
 printfn $"{partTwo input}"
