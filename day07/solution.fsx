@@ -20,7 +20,7 @@ let parse (filepath:string) =
             | [size; file] -> ($"{dir}/{file}", int size) :: recurse dir tail
             | _ -> recurse dir tail
         | [] -> []
-    
+
     File.ReadAllLines filepath
     |> Array.toList
     |> recurse ""
