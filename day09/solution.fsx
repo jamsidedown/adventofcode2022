@@ -37,6 +37,18 @@ let vector (head:Coord) (tail:Coord) =
     let vy = vec head.y tail.y
     {x=vx; y=vy}
 
+let step (head:Coord) (dir:Direction) =
+    match dir with
+    | Up -> {x=head.x; y=head.y + 1}
+    | Down -> {x=head.x; y=head.y - 1}
+    | Left -> {x=head.x - 1; y=head.y}
+    | Right -> {x=head.x + 1; y=head.y}
+
+let catchup (head:Coord) (tail:Coord) =
+    match distance head tail with
+    | d when d > 1 -> vector head tail |> add tail
+    | _ -> tail
+
 let partOne (instructions:array<Instruction>) =
     let mutable head = {x=0; y=0}
     let mutable tail = {x=0; y=0}
@@ -44,23 +56,34 @@ let partOne (instructions:array<Instruction>) =
 
     for instruction in instructions do
         for _ in [| 1..instruction.dist |] do
-            match instruction.dir with
-            | Up -> head <- {x=head.x; y=head.y + 1}
-            | Down -> head <- {x=head.x; y=head.y - 1}
-            | Left -> head <- {x=head.x - 1; y=head.y}
-            | Right -> head <- {x=head.x + 1; y=head.y}
+            head <- step head instruction.dir
+            tail <- catchup head tail
+            path <- path.Add tail
 
-            match distance head tail with
-            | d when d > 1 ->
-                let vec = vector head tail
-                tail <- add tail vec
-                path <- path.Add tail
-            | _ -> ()
+    path |> Set.count
+
+let partTwo (instructions:array<Instruction>) =
+    let mutable rope = [| 0..9 |] |> Array.map (fun _ -> {x=0; y=0})
+    let mutable path = Set<Coord>(seq {{x=0; y=0}})
+
+    for instruction in instructions do
+        for _ in [| 1..instruction.dist |] do
+            rope[0] <- step rope[0] instruction.dir
+
+            for index in [| 1..9 |] do
+                rope[index] <- catchup rope[index-1] rope[index]
+                if index = 9 then
+                    path <- path.Add rope[index]
 
     path |> Set.count
 
 let testInput = parse "day09/test_input.txt"
+let testInputTwo = parse "day09/test_input_2.txt"
 let input = parse "day09/input.txt"
 
 assert (partOne testInput = 13)
 printfn $"{partOne input}"
+
+assert (partTwo testInput = 1)
+assert (partTwo testInputTwo = 36)
+printfn $"{partTwo input}"
