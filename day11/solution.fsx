@@ -5,15 +5,15 @@ open System.Collections.Generic
 let newline = Environment.NewLine
 
 type Operation =
-    | Add of int
-    | Multiply of int
+    | Add of int64
+    | Multiply of int64
     | Square
 
 type Monkey = {
     id: int;
-    items: Queue<int>;
+    items: Queue<int64>;
     operation: Operation;
-    divisor: int;
+    divisor: int64;
     trueTarget: int;
     falseTarget: int;
 }
@@ -22,7 +22,7 @@ let parseId (line:string) =
     line[7..].TrimEnd ':' |> int
 
 let parseItems (line:string) =
-    line[18..].Split ", " |> Array.map int
+    line[18..].Split ", " |> Array.map int64
 
 let parseOperation (line:string) =
     match line[19..].Split ' ' with
@@ -33,7 +33,7 @@ let parseOperation (line:string) =
     | _ -> Add 0
 
 let parseDivisor (line:string) =
-    line[21..] |> int
+    line[21..] |> int64
 
 let parseTrue (line:string) =
     line[29..] |> int
@@ -61,8 +61,8 @@ let parse (filepath:string) =
     |> Array.map parseMonkey
     |> Array.choose id
 
-let runMonkey (monkeys:array<Monkey>) (monkey:Monkey) =
-    let count = monkey.items.Count
+let runMonkey (monkeys:array<Monkey>) (manage:int64 -> int64) (monkey:Monkey) =
+    let count = monkey.items.Count |> int64
 
     while monkey.items |> Seq.isEmpty |> not do
         let item = monkey.items.Dequeue()
@@ -71,22 +71,19 @@ let runMonkey (monkeys:array<Monkey>) (monkey:Monkey) =
             | Square -> item * item
             | Add n -> item + n
             | Multiply n -> item * n
-        let inspected = operated / 3
+        let inspected = manage operated
         match inspected % monkey.divisor with
-        | 0 -> monkeys[monkey.trueTarget].items.Enqueue inspected
+        | 0L -> monkeys[monkey.trueTarget].items.Enqueue inspected
         | _ -> monkeys[monkey.falseTarget].items.Enqueue inspected
 
     count
 
-let runRound (monkeys:array<Monkey>) =
-    monkeys |> Array.map (runMonkey monkeys)
+let run (monkeys:array<Monkey>) (rounds:int) (manage:int64 -> int64) =
+    let mutable counts = [|0..(monkeys.Length-1)|] |> Array.map (fun _ -> 0L)
 
-let partOne (monkeys:array<Monkey>) =
-    let mutable counts = [|0..(monkeys.Length-1)|] |> Array.map (fun _ -> 0)
-
-    for _ in [|1..20|] do
+    for _ in [|1..rounds|] do
         counts <-
-            runRound monkeys
+            monkeys |> Array.map (runMonkey monkeys manage)
             |> Array.zip counts
             |> Array.map (fun (a, b) -> a + b)
 
@@ -95,5 +92,19 @@ let partOne (monkeys:array<Monkey>) =
     |> Array.take 2
     |> Array.reduce ( * )
 
-assert (parse "day11/test_input.txt" |> partOne = 10605)
+let partOne (monkeys:array<Monkey>) =
+    run monkeys 20 (fun (x:int64) -> x / 3L)
+
+let partTwo (monkeys:array<Monkey>) =
+    let divisor =
+        monkeys
+        |> Array.map (fun m -> m.divisor)
+        |> Array.reduce ( * )
+
+    run monkeys 10_000 (fun x -> x % divisor)
+
+assert (parse "day11/test_input.txt" |> partOne = 10605L)
 parse "day11/input.txt" |> partOne |> printfn "%A"
+
+assert (parse "day11/test_input.txt" |> partTwo = 2713310158L)
+parse "day11/input.txt" |> partTwo |> printfn "%A"
