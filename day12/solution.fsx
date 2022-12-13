@@ -18,11 +18,6 @@ let withinRange (first:int) (second:int) =
     | n when n <= 1 -> true
     | _ -> false
 
-let withinOne (a:int) (b:int) =
-    match a - b with
-    | -1 | 0 | 1 -> true
-    | _ -> false
-
 let getNeighbours (grid:array<array<int>>) (x:int) (y:int) =
     [| (x + 1, y); (x - 1, y); (x, y + 1); (x, y - 1) |]
     |> Array.filter (fun (x, _) -> x >= 0 && x < (grid.Length))
@@ -56,11 +51,10 @@ let findStart (grid:array<array<int>>) =
     |> Array.head
     |> fst
 
-let dijkstra (grid:array<array<int>>) =
+let dijkstra (grid:array<array<int>>) (distancePredicate:int -> int -> int) =
     let startCoord = findStart grid
     let paths = pathGrid grid.Length grid[0].Length startCoord
     let allNeighbours = getAllNeighbours grid
-    // startCoord |> printfn "%A"
     let mutable active = Set.ofList [ (startCoord.x, startCoord.y) ]
 
     while not active.IsEmpty do
@@ -70,7 +64,8 @@ let dijkstra (grid:array<array<int>>) =
         let neighbours = allNeighbours[source] |> Seq.filter (active.Contains >> not)
         for neighbour in neighbours do
             let (nx, ny) = neighbour
-            let neighbourDistance = distance + 1
+            let distanceTransform = distancePredicate (grid[nx][ny])
+            let neighbourDistance = distanceTransform distance 
             if neighbourDistance < (paths[nx][ny]).distance then
                 paths[nx][ny] <- { distance = neighbourDistance; previous = { x=x; y=y } }
                 active <- active.Add neighbour
@@ -87,29 +82,28 @@ let findFinish (grid:array<array<int>>) =
     |> Array.head
     |> fst
 
-let pprint (paths:array<array<Path>>) =
-    for row in paths do
-        row
-        |> Array.map (fun path -> path.distance |> sprintf "%04i")
-        |> String.concat ", "
-        |> printfn "%s"
-
 let partOne (grid:array<array<int>>) =
-    let paths = dijkstra grid
-    // pprint paths
+    let distancePredicate (value:int) = (fun d -> d + 1)
+    let paths = dijkstra grid distancePredicate
+    let finish = findFinish grid
+    (paths[finish.x][finish.y]).distance
+
+
+let partTwo (grid:array<array<int>>) =
+    let distancePredicate (value:int) =
+        match value with
+        | 0 -> fun d -> 0
+        | _ -> fun d -> d + 1
+
+    let paths = dijkstra grid distancePredicate
     let finish = findFinish grid
     (paths[finish.x][finish.y]).distance
 
 let testInput = parse "day12/test_input.txt"
 let input = parse "day12/input.txt"
 
-// let output =
-//     input
-//     |> Array.map (fun row ->
-//         row
-//         |> Array.map (sprintf "%02i")
-//         |> String.concat ", ")
-// File.WriteAllLines("day12/out.txt", output)
-
 assert (partOne testInput = 31)
 partOne input |> printfn "%A"
+
+assert (partTwo testInput = 29)
+partTwo input |> printfn "%A"
