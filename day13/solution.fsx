@@ -47,7 +47,7 @@ let compare (left:string) (right:string) =
             | _ -> recurse lt rt
         | ([], _) -> true
         | _ -> false
-    
+
     recurse (Seq.toList left) (Seq.toList right)
 
 let rec quicksort (packets:list<string>) =

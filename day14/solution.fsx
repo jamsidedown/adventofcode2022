@@ -47,16 +47,45 @@ let partOne (blocks:Set<Coord>) =
                     | right -> lower right
                 | left -> lower left
             | down -> lower down
-        
+
         match lower {x=500; y=0} with
         | Some coord -> sand |> Set.add coord |> drop
         | None -> sand
-    
+
     let blocksWithSand = drop blocks
     blocksWithSand.Count - blocks.Count
+
+let partTwo (blocks:Set<Coord>) =
+    let maxY = blocks |> Seq.map (fun c -> c.y) |> Seq.max
+
+    let rec drop (sand:Set<Coord>) =
+        let rec lower (current:Coord) =
+            if current.y > maxY then
+                Some current
+            else
+                match {current with y=current.y+1} with
+                | down when sand.Contains down ->
+                    match {down with x=down.x-1} with
+                    | left when sand.Contains left ->
+                        match {down with x=down.x+1} with
+                        | right when sand.Contains right -> if current.y = 0 then None else Some current
+                        | right -> lower right
+                    | left -> lower left
+                | down -> lower down
+
+        match lower {x=500; y=0} with
+        | Some coord -> sand |> Set.add coord |> drop
+        | None -> sand
+
+    let blocksWithSand = drop blocks
+    (blocksWithSand.Count + 1) - blocks.Count
+
 
 let testInput = parse "day14/test_input.txt"
 assert (partOne testInput = 24)
 
 let input = parse "day14/input.txt"
 printfn $"{partOne input}"
+
+assert (partTwo testInput = 93)
+printfn $"{partTwo input}"
