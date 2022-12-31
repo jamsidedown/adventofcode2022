@@ -95,8 +95,34 @@ let partOne (row:int) (coords:array<Coord*Coord>) =
     |> List.sumBy rangeLength
     |> fun count -> count - beaconsInRanges
 
+let getGap (lower:int) (higher:int) (coords:array<Coord*Coord>) =
+    [| lower .. higher |]
+    |> Array.map (fun row ->
+        coords
+        |> Array.choose (fun (sensor, beacon) -> getRange row sensor beacon)
+        |> Array.toList
+        |> combineRanges)
+    |> Array.mapi (fun index ranges -> (index, ranges))
+    |> Array.where (fun (_, ranges) -> ranges.Length > 1)
+    |> Array.tryHead
+
+let partTwo (lower:int) (higher:int) (coords:array<Coord*Coord>) =
+    match getGap lower higher coords with
+    | Some (y, [first; second]) when first.high + 2 = second.low ->
+        let x = first.high + 1 |> int64
+        let y = y |> int64
+        x * 4_000_000L + y
+    | Some (y, [first; second]) when second.high + 2 = first.low ->
+        let x = second.high + 1 |> int64
+        let y = y |> int64
+        x * 4_000_000L + y
+    | _ -> 0L
+
 let testInput = parse "day15/test_input.txt"
 assert (testInput |> partOne 10 = 26)
 
 let input = parse "day15/input.txt"
-input |> partOne 2000000 |> printfn "%A"
+input |> partOne 2_000_000 |> printfn "%A"
+
+assert (testInput |> partTwo 0 20 = 56000011L)
+input |> partTwo 0 4_000_000 |> printfn "%A"
