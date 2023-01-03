@@ -2,10 +2,10 @@ open System.Collections.Generic
 open System.IO
 open System.Text.RegularExpressions
 
-let pattern = Regex @"^Valve (\w\w) has flow rate=(\d+); tunnels lead to valves (.+)$"
+let pattern = Regex @"^Valve (\w\w) has flow rate=(\d+); tunnels? leads? to valves? (.+)$"
 
-type Tunnel = {target:string; distance:int}
-type Valve = {key:string; flow:int; tunnels:array<Tunnel>}
+// type Tunnel = {target:string; distance:int}
+type Valve = {key:string; flow:int; tunnels:Dictionary<string,int>}
 
 let parseLine (line:string) =
     let m = pattern.Match line
@@ -17,12 +17,13 @@ let parseLine (line:string) =
         |> Seq.toArray
         |> function
         | [| valveKey; flow; tunnels |] ->
+            let tunnelsDict = Dictionary<string,int>()
+            for tunnel in tunnels.Split ", " do
+                tunnelsDict[tunnel] <- 1
             Some {
                 key=valveKey;
                 flow=int flow;
-                tunnels=
-                    tunnels.Split ", "
-                    |> Array.map (fun t -> {target=t; distance=1})
+                tunnels= tunnelsDict
             }
         | _ -> None
     | false -> None
@@ -31,37 +32,42 @@ let parse (filepath:string) =
     File.ReadAllLines filepath
     |> Array.choose parseLine
     |> Array.map (fun valve -> (valve.key, valve))
-    |> dict
+    |> Map
 
-let reduceDistance (from:Tunnel) (dest:Tunnel) =
-    {dest with distance=from.distance + dest.distance}
-
-let rec reduceTunnels (valves:IDictionary<string,Valve>) (tunnels:list<Tunnel>) =
-    match tunnels with
-    | head :: tail -> []
-    | [] -> []
-
-let rec reduce (visited:Set<string>) (valves:IDictionary<string,Valve>) =
+let rec reduce (visited:Set<string>) (valves:Map<string,Valve>) =
+    let rec recurseTunnels (source:string) (tunnels:list<string*int>) =
+        match tunnels with
+        | (tunnelKey, tunnelDist) :: tail ->
+            let valve = valves[tunnelKey]
+            valve.tunnels.Remove source |> ignore
+            for (otherKey, otherDist) in tail do
+                let distance =
+                    match valve.tunnels.ContainsKey otherKey with
+                    | true ->
+                        let existingDist = valve.tunnels[otherKey]
+                        min existingDist (tunnelDist + otherDist)
+                    | false -> tunnelDist + otherDist
+                valves[tunnelKey].tunnels[otherKey] <- distance
+                valves[otherKey].tunnels[tunnelKey] <- distance
+            recurseTunnels source tail
+        | [] -> ()
+    
     let zero =
         valves.Values
         |> Seq.where (fun valve -> Set.contains valve.key visited |> not)
         |> Seq.where (fun valve -> valve.flow = 0)
         |> Seq.tryHead
+
     match zero with
     | Some valve ->
-        let mutable reducedValves = valves
-        let tunnels = valve.tunnels |> Set.ofArray
-        for tunnel in tunnels do
-            let others = tunnels |> Set.remove tunnel
+        valve.tunnels
+        |> Seq.map (fun pair -> (pair.Key, pair.Value))
+        |> Seq.toList
+        |> recurseTunnels valve.key
 
-        valves
-        // valves
+        reduce (visited.Add valve.key) (valves |> Map.remove valve.key)
     | None -> valves
-    // if an unvisited valve exists with zero flow
-    // connect all tunnels together, increasing distances
-    // recurse with valve removed and added to visited
-
-    // else return valves
 
 let testInput = parse "day16/test_input.txt"
-testInput |> Seq.head |> printfn "%A"
+testInput.Keys |> Seq.toArray |> printfn "%A"
+testInput |> (Set ["AA"] |> reduce) |> Seq.toArray |> printfn "%A"
