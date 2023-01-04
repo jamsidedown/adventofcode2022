@@ -45,7 +45,7 @@ let rec reduce (visited:Set<string>) (valves:Map<string,Valve>) =
                 valves[otherKey].tunnels[tunnelKey] <- distance
             recurseTunnels source tail
         | [] -> ()
-    
+
     let zero =
         valves.Values
         |> Seq.where (fun valve -> Set.contains valve.key visited |> not)
@@ -88,7 +88,7 @@ let distance (source:string) (dest:string) (valves:Map<string,Valve>) =
                 distances[neighbour.Key] <- neighbourDistance
                 active <- active.Add neighbour.Key
         active <- active.Remove current
-    
+
     distances[dest]
 
 let rec combinations (values:list<string>) =
@@ -114,25 +114,24 @@ let partOne (valves:Map<string,Valve>) =
 
     let score (active:seq<String>) =
         active |> Seq.sumBy (fun key -> valves[key].flow)
-    
+
     let rec recurse (active:Set<string>) (current:string) (timeRemaining:int) =
         match timeRemaining with
-        | x when x < 1 -> [0]
+        | x when x < 1 -> 0
         | _ ->
             Set.difference keys active
             |> Seq.where (fun dest -> distances[(current,dest)] + 1 < timeRemaining)
             |> List.ofSeq
-            |> List.collect (fun dest ->
+            |> List.map (fun dest ->
                 let d = distances[(current,dest)]
                 let destScore = ((d + 1) * score active)
-                recurse (active.Add dest) dest (timeRemaining - (d + 1))
-                |> List.map (fun s -> s + destScore))
+                let recurseScore = recurse (active.Add dest) dest (timeRemaining - (d + 1))
+                destScore + recurseScore)
             |> function
-            | [] -> [timeRemaining * score active]
-            | ls -> ls
+            | [] -> timeRemaining * score active
+            | ls -> ls |> List.max
 
     recurse (Set ["AA"]) "AA" 30
-    |> List.max
 
 let testInput = parse "day16/test_input.txt"
 assert (partOne testInput = 1651)
