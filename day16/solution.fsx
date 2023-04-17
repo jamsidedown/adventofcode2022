@@ -119,13 +119,14 @@ let partOne (valves:Map<string,Valve>) =
         match timeRemaining with
         | x when x < 1 -> 0
         | _ ->
-            Set.difference keys active
+            Set.ofSeq active
+            |> Set.difference keys
             |> Seq.where (fun dest -> distances[(current,dest)] + 1 < timeRemaining)
             |> List.ofSeq
             |> List.map (fun dest ->
-                let d = distances[(current,dest)]
-                let destScore = ((d + 1) * score active)
-                let recurseScore = recurse (active.Add dest) dest (timeRemaining - (d + 1))
+                let d = distances[(current,dest)] + 1
+                let destScore = (d * score active)
+                let recurseScore = recurse (active.Add dest) dest (timeRemaining - d)
                 destScore + recurseScore)
             |> function
             | [] -> timeRemaining * score active
@@ -133,8 +134,51 @@ let partOne (valves:Map<string,Valve>) =
 
     recurse (Set ["AA"]) "AA" 30
 
+let partTwo (valves:Map<string,Valve>) =
+    let distances = getDistances valves
+    let keys = valves.Keys |> Set.ofSeq
+
+    let score (active:seq<String>) =
+        active |> Seq.sumBy (fun key -> valves[key].flow)
+
+    let rec recurse (active:Set<string>) (current:string) (elephant:string) (currentTime:int) (elephantTime:int) (timeRemaining:int) =
+        match timeRemaining with
+        | x when x < 1 -> 0
+        | _ ->
+            match (currentTime,elephantTime) with
+            | (0,_) ->
+                let newActive = active.Add current
+                Set.difference keys (newActive.Add elephant)
+                |> Seq.where (fun dest -> distances[(current,dest)] + 1 < timeRemaining)
+                |> List.ofSeq
+                |> List.map (fun dest ->
+                    let newTime = distances[(current,dest)] + 1
+                    recurse newActive dest elephant newTime elephantTime timeRemaining)
+                |> function
+                | [] -> recurse newActive current elephant timeRemaining elephantTime timeRemaining
+                | ls -> ls |> List.max
+            | (_,0) ->
+                let newActive = active.Add elephant
+                Set.difference keys (newActive.Add current)
+                |> Seq.where (fun dest -> distances[(elephant,dest)] + 1 < timeRemaining)
+                |> List.ofSeq
+                |> List.map (fun dest ->
+                    let newTime = distances[(elephant,dest)] + 1
+                    recurse newActive current dest currentTime newTime timeRemaining)
+                |> function
+                | [] -> recurse newActive current elephant currentTime timeRemaining timeRemaining
+                | ls -> ls |> List.max
+            | _ -> 
+                let dt = seq { currentTime; elephantTime; timeRemaining } |> Seq.min
+                let recurseScore = recurse active current elephant (currentTime - dt) (elephantTime - dt) (timeRemaining - dt)
+                ((score active) * dt) + recurseScore
+
+    recurse (Set ["AA"]) "AA" "AA" 0 0 26
+
 let testInput = parse "day16/test_input.txt"
 assert (partOne testInput = 1651)
+assert (partTwo testInput = 1707)
 
 let input = parse "day16/input.txt"
 partOne input |> printfn "%i"
+partTwo input |> printfn "%i"
