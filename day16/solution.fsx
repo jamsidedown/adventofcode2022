@@ -7,6 +7,8 @@ let pattern = Regex @"^Valve (\w\w) has flow rate=(\d+); tunnels? leads? to valv
 
 type Valve = {key:string; flow:int; tunnels:Dictionary<string,int>}
 
+printfn "Warning: slow solution - took around 11 minutes to run on my computer."
+
 let parseLine (line:string) =
     let m = pattern.Match line
     match m.Success with
