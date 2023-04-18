@@ -7,8 +7,6 @@ let pattern = Regex @"^Valve (\w\w) has flow rate=(\d+); tunnels? leads? to valv
 
 type Valve = {key:string; flow:int; tunnels:Dictionary<string,int>}
 
-printfn "Warning: slow solution - took around 11 minutes to run on my computer."
-
 let parseLine (line:string) =
     let m = pattern.Match line
     match m.Success with
@@ -124,15 +122,15 @@ let partOne (valves:Map<string,Valve>) =
             Set.ofSeq active
             |> Set.difference keys
             |> Seq.where (fun dest -> distances[(current,dest)] + 1 < timeRemaining)
-            |> List.ofSeq
-            |> List.map (fun dest ->
+            |> Array.ofSeq
+            |> Array.Parallel.map (fun dest ->
                 let d = distances[(current,dest)] + 1
                 let destScore = (d * score active)
                 let recurseScore = recurse (active.Add dest) dest (timeRemaining - d)
                 destScore + recurseScore)
             |> function
-            | [] -> timeRemaining * score active
-            | ls -> ls |> List.max
+            | [||] -> timeRemaining * score active
+            | ls -> ls |> Array.max
 
     recurse (Set ["AA"]) "AA" 30
 
@@ -152,24 +150,24 @@ let partTwo (valves:Map<string,Valve>) =
                 let newActive = active.Add current
                 Set.difference keys (newActive.Add elephant)
                 |> Seq.where (fun dest -> distances[(current,dest)] + 1 < timeRemaining)
-                |> List.ofSeq
-                |> List.map (fun dest ->
+                |> Array.ofSeq
+                |> Array.Parallel.map (fun dest ->
                     let newTime = distances[(current,dest)] + 1
                     recurse newActive dest elephant newTime elephantTime timeRemaining)
                 |> function
-                | [] -> recurse newActive current elephant timeRemaining elephantTime timeRemaining
-                | ls -> ls |> List.max
+                | [||] -> recurse newActive current elephant timeRemaining elephantTime timeRemaining
+                | ls -> ls |> Array.max
             | (_,0) ->
                 let newActive = active.Add elephant
                 Set.difference keys (newActive.Add current)
                 |> Seq.where (fun dest -> distances[(elephant,dest)] + 1 < timeRemaining)
-                |> List.ofSeq
-                |> List.map (fun dest ->
+                |> Array.ofSeq
+                |> Array.map (fun dest ->
                     let newTime = distances[(elephant,dest)] + 1
                     recurse newActive current dest currentTime newTime timeRemaining)
                 |> function
-                | [] -> recurse newActive current elephant currentTime timeRemaining timeRemaining
-                | ls -> ls |> List.max
+                | [||] -> recurse newActive current elephant currentTime timeRemaining timeRemaining
+                | (ls: int array) -> ls |> Array.max
             | _ -> 
                 let dt = seq { currentTime; elephantTime; timeRemaining } |> Seq.min
                 let recurseScore = recurse active current elephant (currentTime - dt) (elephantTime - dt) (timeRemaining - dt)
@@ -183,4 +181,4 @@ assert (partTwo testInput = 1707)
 
 let input = parse "day16/input.txt"
 partOne input |> printfn "%i"
-partTwo input |> printfn "%i"
+// partTwo input |> printfn "%i"
