@@ -97,7 +97,7 @@ let partOne (row:int) (coords:array<Coord*Coord>) =
 
 let getGap (lower:int) (higher:int) (coords:array<Coord*Coord>) =
     [| lower .. higher |]
-    |> Array.map (fun row ->
+    |> Array.Parallel.map (fun row ->
         coords
         |> Array.choose (fun (sensor, beacon) -> getRange row sensor beacon)
         |> Array.toList
