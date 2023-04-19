@@ -181,4 +181,4 @@ assert (partTwo testInput = 1707)
 
 let input = parse "day16/input.txt"
 partOne input |> printfn "%i"
-// partTwo input |> printfn "%i"
+partTwo input |> printfn "%i"
