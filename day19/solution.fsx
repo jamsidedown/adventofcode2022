@@ -1,7 +1,8 @@
 open System.IO
 open System.Text.RegularExpressions
+open System.Collections.Generic
 
-let blueprintPattern = Regex @"^Blueprint \d+: Each ore robot costs (\d+) ore. Each clay robot costs (\d+) ore. Each obsidian robot costs (\d+) ore and (\d+) clay. Each geode robot costs (\d+) ore and (\d+) obsidian.$"
+let blueprintPattern = Regex @"^Blueprint (\d+): Each ore robot costs (\d+) ore. Each clay robot costs (\d+) ore. Each obsidian robot costs (\d+) ore and (\d+) clay. Each geode robot costs (\d+) ore and (\d+) obsidian.$"
 
 type Mineral =
     | Ore
@@ -17,6 +18,7 @@ type Minerals = {
 }
 
 type Blueprint = {
+    id:int;
     oreCost:Minerals;
     clayCost:Minerals;
     obsidianCost:Minerals;
@@ -37,8 +39,9 @@ let parse (filepath:string) =
             |> Seq.map int
             |> Seq.toArray
             |> function
-            | [| oreCost; clayCost; obsidianOreCost; obsidianClayCost; geodeOreCost; geodeObsidianCost |] ->
+            | [| id; oreCost; clayCost; obsidianOreCost; obsidianClayCost; geodeOreCost; geodeObsidianCost |] ->
                 Some {
+                    id=id;
                     oreCost={defaultMinerals with ore=oreCost};
                     clayCost={defaultMinerals with ore=clayCost};
                     obsidianCost={defaultMinerals with ore=obsidianOreCost; clay=obsidianClayCost};
@@ -58,13 +61,20 @@ let produce (robots:Minerals) (materials:Minerals) =
 let greaterThan (a:Minerals) (b:Minerals) =
     (a.ore >= b.ore) && (a.clay >= b.clay) && (a.obsidian >= b.obsidian) && (a.geode >= b.geode)
 
-let getOptions (blueprint:Blueprint) (materials:Minerals) =
+let getOptions (blueprint:Blueprint) (robots:Minerals) (materials:Minerals) =
+    let canAffordOre = greaterThan materials blueprint.oreCost
+    let canAffordClay = greaterThan materials blueprint.clayCost
+    let canAffordObsidian = greaterThan materials blueprint.obsidianCost
+    let canAffordGeode = greaterThan materials blueprint.geodeCost
+
+    let maxOreCost = [| blueprint.oreCost.ore; blueprint.clayCost.ore; blueprint.obsidianCost.ore; blueprint.geodeCost.ore |] |> Array.max
+
     seq {
-        yield None
-        if greaterThan materials blueprint.oreCost then yield Some Ore
-        if greaterThan materials blueprint.clayCost then yield Some Clay
-        if greaterThan materials blueprint.obsidianCost then yield Some Obsidian
-        if greaterThan materials blueprint.geodeCost then yield Some Geode
+        if (not canAffordOre || not canAffordClay || not canAffordObsidian || not canAffordGeode) then yield None
+        if canAffordOre && robots.ore < maxOreCost then yield Some Ore
+        if canAffordClay && robots.clay < blueprint.obsidianCost.clay then yield Some Clay
+        if canAffordObsidian && robots.obsidian < blueprint.geodeCost.obsidian then yield Some Obsidian
+        if canAffordGeode then yield Some Geode
     } |> Seq.toArray
 
 let subtract (a:Minerals) (b:Minerals) =
@@ -76,37 +86,53 @@ let subtract (a:Minerals) (b:Minerals) =
     }
 
 let run (turns:int) (blueprint:Blueprint) =
-    let rec recurse (robots:Minerals) (materials:Minerals) (turns:int) =
-        match turns with
-        | 0 -> materials.geode
-        | _ ->
-            let nextTurn = turns - 1
+    let cache = Dictionary<Minerals*Minerals*int, int>()
 
-            getOptions blueprint materials
-            |> Array.map (fun robot ->
-                match robot with
-                | None -> recurse robots (produce robots materials) nextTurn
-                | Some Ore -> recurse {robots with ore=(robots.ore + 1)} (produce robots (subtract materials blueprint.oreCost)) nextTurn
-                | Some Clay -> recurse {robots with clay=(robots.clay + 1)} (produce robots (subtract materials blueprint.clayCost)) nextTurn
-                | Some Obsidian -> recurse {robots with obsidian=(robots.obsidian + 1)} (produce robots (subtract materials blueprint.obsidianCost)) nextTurn
-                | Some Geode -> recurse {robots with geode=(robots.geode + 1)} (produce robots (subtract materials blueprint.geodeCost)) nextTurn)
-            |> Array.max
+    let rec recurse (robots:Minerals) (materials:Minerals) (turns:int) =
+        let entry = (robots,materials,turns)
+        match cache.ContainsKey entry with
+        | true ->
+            cache[entry]
+        | false ->
+            let result = 
+                match turns with
+                | 0 -> materials.geode
+                | _ ->
+                    let nextTurn = turns - 1
+
+                    getOptions blueprint robots materials
+                    |> Array.map (fun robot ->
+                        match robot with
+                        | None -> recurse robots (produce robots materials) nextTurn
+                        | Some Ore -> recurse {robots with ore=(robots.ore + 1)} (produce robots (subtract materials blueprint.oreCost)) nextTurn
+                        | Some Clay -> recurse {robots with clay=(robots.clay + 1)} (produce robots (subtract materials blueprint.clayCost)) nextTurn
+                        | Some Obsidian -> recurse {robots with obsidian=(robots.obsidian + 1)} (produce robots (subtract materials blueprint.obsidianCost)) nextTurn
+                        | Some Geode -> recurse {robots with geode=(robots.geode + 1)} (produce robots (subtract materials blueprint.geodeCost)) nextTurn)
+                    |> Array.max
+            cache.Add(entry, result)
+            result
 
     recurse {defaultMinerals with ore=1} defaultMinerals turns
 
 let partOne (blueprints: array<Blueprint>) =
-
     blueprints
-    // |> Array.map (run 24)
     |> Array.map (fun blueprint ->
         let result = run 24 blueprint
-        printfn $"{result}"
+        printfn $"{blueprint.id}: {result}, score: {result * blueprint.id}"
+        result * blueprint.id)
+    |> Array.sum
+
+let partTwo (blueprints: array<Blueprint>) =
+    blueprints
+    |> Array.map (fun blueprint ->
+        let result = run 32 blueprint
+        printfn $"{blueprint.id}: {result}"
         result)
-    |> Array.max
+    |> Array.reduce ( * )
 
 let testInput = parse "day19/test_input.txt"
-// assert (partOne testInput = 12)
-testInput |> partOne |> printfn "%A"
+// assert (partOne testInput = 33)
+partTwo testInput |> printfn "%i"
 
 let input = parse "day19/input.txt"
 // partOne input |> printfn "%A"
